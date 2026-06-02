@@ -21,7 +21,7 @@ function bootstrapApplication() {
         window.addEventListener('touchend', handleEnd);
     }
     
-    // 2. Keyboard shortcuts (Spacebar Panning, Undo & Redo)
+    // 2. Keyboard shortcuts (Spacebar Panning, Undo, Redo & Tools)
     window.addEventListener('keydown', (e) => {
         const activeTag = document.activeElement.tagName;
         // Ignore whiteboard shortcuts if typing inside text fields
@@ -54,6 +54,26 @@ function bootstrapApplication() {
                 // Ctrl+Y / Cmd+Y: Redo
                 e.preventDefault();
                 socket.emit('redo-action');
+            }
+        } else if (!e.altKey && !state.isViewMode) {
+            // Numeric keys 1-7 for switching drawing tools (Edit Mode only, no modifiers)
+            const toolKeys = {
+                '1': 'tool-brush',
+                '2': 'tool-line',
+                '3': 'tool-rect',
+                '4': 'tool-circle',
+                '5': 'tool-eraser',
+                '6': 'tool-pan',
+                '7': 'tool-export-area'
+            };
+            
+            const btnId = toolKeys[e.key];
+            if (btnId) {
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    e.preventDefault();
+                    btn.click();
+                }
             }
         }
     });
