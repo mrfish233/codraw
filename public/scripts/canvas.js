@@ -152,16 +152,24 @@ export function drawAction(action) {
         }
     } else if (action.tool === 'circle') {
         if (action.start && action.end) {
-            const dx = action.end.x - action.start.x;
-            const dy = action.end.y - action.start.y;
-            const radius = Math.sqrt(dx * dx + dy * dy);
+            const x1 = action.start.x;
+            const y1 = action.start.y;
+            const x2 = action.end.x;
+            const y2 = action.end.y;
             
-            dom.ctx.beginPath();
-            dom.ctx.arc(action.start.x, action.start.y, radius, 0, 2 * Math.PI);
-            if (action.fill) {
-                dom.ctx.fill();
+            const centerX = (x1 + x2) / 2;
+            const centerY = (y1 + y2) / 2;
+            const radiusX = Math.abs(x1 - x2) / 2;
+            const radiusY = Math.abs(y1 - y2) / 2;
+            
+            if (radiusX > 0 && radiusY > 0) {
+                dom.ctx.beginPath();
+                dom.ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                if (action.fill) {
+                    dom.ctx.fill();
+                }
+                dom.ctx.stroke();
             }
-            dom.ctx.stroke();
         }
     }
     dom.ctx.restore();
@@ -188,12 +196,12 @@ export function getCoordinates(e) {
     };
 }
 
-// Helper to update current drawing coordinates, applying a square constraint to the rectangle tool if Shift is held
+// Helper to update current drawing coordinates, applying a square constraint to the rectangle or circle (ellipse) tool if Shift is held
 export function updateCurrentPoint(worldCoord, isShiftPressed) {
     state.isShiftPressed = !!isShiftPressed;
     state.currentRawPoint = worldCoord;
     
-    if (state.currentTool === 'rect' && state.isShiftPressed) {
+    if ((state.currentTool === 'rect' || state.currentTool === 'circle') && state.isShiftPressed) {
         const dx = worldCoord.x - state.startPoint.x;
         const dy = worldCoord.y - state.startPoint.y;
         const side = Math.max(Math.abs(dx), Math.abs(dy));
@@ -206,9 +214,9 @@ export function updateCurrentPoint(worldCoord, isShiftPressed) {
     }
 }
 
-// Handles Shift key state changes to dynamically toggle square constraints for active previews
+// Handles Shift key state changes to dynamically toggle square/circle constraints for active previews
 export function handleShiftChange(isShiftPressed) {
-    if (!state.isDrawing || state.currentTool !== 'rect') return;
+    if (!state.isDrawing || !['rect', 'circle'].includes(state.currentTool)) return;
     
     updateCurrentPoint(state.currentRawPoint, isShiftPressed);
     

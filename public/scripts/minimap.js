@@ -67,13 +67,22 @@ export function drawMinimap() {
             }
         } else if (action.tool === 'circle') {
             if (action.start && action.end) {
-                const dx = action.end.x - action.start.x;
-                const dy = action.end.y - action.start.y;
-                const radius = Math.sqrt(dx * dx + dy * dy);
-                dom.minimapCtx.beginPath();
-                dom.minimapCtx.arc(action.start.x, action.start.y, radius, 0, 2 * Math.PI);
-                if (action.fill) dom.minimapCtx.fill();
-                dom.minimapCtx.stroke();
+                const x1 = action.start.x;
+                const y1 = action.start.y;
+                const x2 = action.end.x;
+                const y2 = action.end.y;
+                
+                const centerX = (x1 + x2) / 2;
+                const centerY = (y1 + y2) / 2;
+                const radiusX = Math.abs(x1 - x2) / 2;
+                const radiusY = Math.abs(y1 - y2) / 2;
+                
+                if (radiusX > 0 && radiusY > 0) {
+                    dom.minimapCtx.beginPath();
+                    dom.minimapCtx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                    if (action.fill) dom.minimapCtx.fill();
+                    dom.minimapCtx.stroke();
+                }
             }
         }
         dom.minimapCtx.restore();

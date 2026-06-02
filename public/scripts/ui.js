@@ -220,13 +220,10 @@ export function bindUiEvents() {
                             shapeW = Math.abs(action.start.x - action.end.x);
                             shapeH = Math.abs(action.start.y - action.end.y);
                         } else if (action.tool === 'circle') {
-                            const dx = action.end.x - action.start.x;
-                            const dy = action.end.y - action.start.y;
-                            const r = Math.sqrt(dx * dx + dy * dy);
-                            shapeX = action.start.x - r;
-                            shapeY = action.start.y - r;
-                            shapeW = r * 2;
-                            shapeH = r * 2;
+                            shapeX = Math.min(action.start.x, action.end.x);
+                            shapeY = Math.min(action.start.y, action.end.y);
+                            shapeW = Math.abs(action.start.x - action.end.x);
+                            shapeH = Math.abs(action.start.y - action.end.y);
                         }
                         
                         const intersects = (shapeX < sel.x + sel.w && shapeX + shapeW > sel.x && shapeY < sel.y + sel.h && shapeY + shapeH > sel.y);
@@ -348,15 +345,24 @@ export function bindUiEvents() {
                     }
                 } else if (action.tool === 'circle') {
                     if (action.start && action.end) {
-                        const dx = action.end.x - action.start.x;
-                        const dy = action.end.y - action.start.y;
-                        const radius = Math.sqrt(dx * dx + dy * dy);
-                        exportCtx.beginPath();
-                        exportCtx.arc(action.start.x, action.start.y, radius, 0, 2 * Math.PI);
-                        if (action.fill) {
-                            exportCtx.fill();
+                        const x1 = action.start.x;
+                        const y1 = action.start.y;
+                        const x2 = action.end.x;
+                        const y2 = action.end.y;
+                        
+                        const centerX = (x1 + x2) / 2;
+                        const centerY = (y1 + y2) / 2;
+                        const radiusX = Math.abs(x1 - x2) / 2;
+                        const radiusY = Math.abs(y1 - y2) / 2;
+                        
+                        if (radiusX > 0 && radiusY > 0) {
+                            exportCtx.beginPath();
+                            exportCtx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                            if (action.fill) {
+                                exportCtx.fill();
+                            }
+                            exportCtx.stroke();
                         }
-                        exportCtx.stroke();
                     }
                 }
                 exportCtx.restore();
