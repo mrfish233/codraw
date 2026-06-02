@@ -3,7 +3,7 @@
 import { state, loadLocalProfile, loadLocalHistory } from './state.js';
 import { dom } from './dom.js';
 import { socket, initRoomConnection, registerSocketListeners } from './socket.js';
-import { resizeCanvas, handleStart, handleMove, handleEnd, redraw } from './canvas.js';
+import { resizeCanvas, handleStart, handleMove, handleEnd, redraw, handleShiftChange } from './canvas.js';
 import { bindChatEvents } from './chat.js';
 import { bindMinimapEvents } from './minimap.js';
 import { bindUiEvents } from './ui.js';
@@ -27,6 +27,12 @@ function bootstrapApplication() {
         // Ignore whiteboard shortcuts if typing inside text fields
         if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
             return;
+        }
+        
+        if (e.key === 'Shift') {
+            if (!state.isShiftPressed) {
+                handleShiftChange(true);
+            }
         }
         
         if (e.code === 'Space') {
@@ -79,6 +85,9 @@ function bootstrapApplication() {
     });
 
     window.addEventListener('keyup', (e) => {
+        if (e.key === 'Shift') {
+            handleShiftChange(false);
+        }
         if (e.code === 'Space') {
             state.isSpacePressed = false;
             if (dom.canvas) {

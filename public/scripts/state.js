@@ -32,6 +32,8 @@ export const state = {
     isPanning: false,
     panStart: { x: 0, y: 0 },
     isSpacePressed: false,
+    isShiftPressed: false,
+    currentRawPoint: { x: 0, y: 0 },
     
     // Target crop selection area
     exportSelection: null, // Stores { x, y, w, h } in world space

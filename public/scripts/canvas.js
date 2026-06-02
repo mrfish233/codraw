@@ -188,6 +188,43 @@ export function getCoordinates(e) {
     };
 }
 
+// Helper to update current drawing coordinates, applying a square constraint to the rectangle tool if Shift is held
+export function updateCurrentPoint(worldCoord, isShiftPressed) {
+    state.isShiftPressed = !!isShiftPressed;
+    state.currentRawPoint = worldCoord;
+    
+    if (state.currentTool === 'rect' && state.isShiftPressed) {
+        const dx = worldCoord.x - state.startPoint.x;
+        const dy = worldCoord.y - state.startPoint.y;
+        const side = Math.max(Math.abs(dx), Math.abs(dy));
+        state.currentPoint = {
+            x: state.startPoint.x + (dx >= 0 ? 1 : -1) * side,
+            y: state.startPoint.y + (dy >= 0 ? 1 : -1) * side
+        };
+    } else {
+        state.currentPoint = worldCoord;
+    }
+}
+
+// Handles Shift key state changes to dynamically toggle square constraints for active previews
+export function handleShiftChange(isShiftPressed) {
+    if (!state.isDrawing || state.currentTool !== 'rect') return;
+    
+    updateCurrentPoint(state.currentRawPoint, isShiftPressed);
+    
+    socket.emit('draw-active', {
+        tool: state.currentTool,
+        start: state.startPoint,
+        end: state.currentPoint,
+        color: state.currentColor,
+        width: state.currentSize,
+        opacity: state.currentOpacity,
+        fill: state.fillShape
+    });
+    
+    redraw();
+}
+
 // Click / Touch Start event handler
 export function handleStart(e) {
     const isMiddleClick = e.button === 1;
@@ -240,8 +277,8 @@ export function handleStart(e) {
     };
     
     state.startPoint = worldCoord;
-    state.currentPoint = worldCoord;
-    state.points = [worldCoord];
+    updateCurrentPoint(worldCoord, e.shiftKey);
+    state.points = [state.currentPoint];
     
     broadcastCursor(worldCoord.x, worldCoord.y, true);
     
@@ -292,10 +329,10 @@ export function handleMove(e) {
     
     if (!state.isDrawing) return;
     
-    state.currentPoint = worldCoord;
+    updateCurrentPoint(worldCoord, e.shiftKey);
     
     if (state.currentTool === 'brush' || state.currentTool === 'eraser') {
-        state.points.push(worldCoord);
+        state.points.push(state.currentPoint);
         
         socket.emit('draw-active', {
             tool: state.currentTool,
@@ -320,7 +357,7 @@ export function handleMove(e) {
 }
 
 // Release Mouse / Touch End event handler
-export function handleEnd() {
+export function handleEnd(e) {
     if (state.isSelectingArea) {
         state.isSelectingArea = false;
         
@@ -347,6 +384,11 @@ export function handleEnd() {
     }
     
     if (!state.isDrawing) return;
+    
+    // Finalize shift status on release and update coordinates one last time
+    state.isShiftPressed = e && e.shiftKey;
+    updateCurrentPoint(state.currentRawPoint, state.isShiftPressed);
+    
     state.isDrawing = false;
     
     broadcastCursor(state.currentPoint.x, state.currentPoint.y, false);
