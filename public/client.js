@@ -1113,6 +1113,47 @@ document.getElementById('modal-submit').addEventListener('click', () => {
     appendSystemMessage(`You have joined the room as "${myUsername}"!`);
 });
 
+// Toggle Sidebar Chat Button Toggler
+const toggleChatBtn = document.getElementById('toggle-chat-btn');
+const chatSidebar = document.getElementById('chat-sidebar');
+const appContainer = document.querySelector('.app-container');
+
+if (toggleChatBtn && chatSidebar) {
+    toggleChatBtn.addEventListener('click', () => {
+        // Strip the completed CSS entry keyframes animation to prevent its 'forwards' rule from overriding transform/opacity
+        chatSidebar.classList.remove('animate-slide-right');
+        
+        // Clear any inline style overrides so the CSS class definitions can cleanly take over
+        chatSidebar.style.transform = '';
+        chatSidebar.style.opacity = '';
+        chatSidebar.style.pointerEvents = '';
+        
+        const actionsBar = document.getElementById('actions-bar');
+        if (actionsBar) {
+            actionsBar.style.right = '';
+        }
+        
+        const isHidden = chatSidebar.classList.toggle('hidden');
+        if (appContainer) {
+            appContainer.classList.toggle('chat-hidden', isHidden);
+        }
+        
+        // Update button text and active state
+        if (isHidden) {
+            toggleChatBtn.classList.remove('active');
+            toggleChatBtn.querySelector('span').textContent = 'Show Chat';
+            toggleChatBtn.setAttribute('title', 'Show Chat Panel');
+        } else {
+            toggleChatBtn.classList.add('active');
+            toggleChatBtn.querySelector('span').textContent = 'Hide Chat';
+            toggleChatBtn.setAttribute('title', 'Hide Chat Panel');
+        }
+        
+        // Redraw and scale canvas once screen expansion transition finishes
+        setTimeout(resizeCanvas, 460);
+    });
+}
+
 // Settings profile click popup toggler
 profileTrigger.addEventListener('click', (e) => {
     e.stopPropagation();

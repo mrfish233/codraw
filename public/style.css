@@ -566,6 +566,13 @@ header {
     flex-direction: column;
     overflow: hidden;
     z-index: 90;
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s ease;
+}
+
+.floating-sidebar.hidden {
+    transform: translateX(360px);
+    opacity: 0;
+    pointer-events: none;
 }
 
 .tabs-header {
@@ -785,6 +792,12 @@ header {
     padding: 0 24px;
     gap: 12px;
     z-index: 100;
+    transition: right 0.45s cubic-bezier(0.16, 1, 0.3, 1), left 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Slide Actions Bar to right when chat drawer is hidden */
+.chat-hidden .floating-actions {
+    right: 20px;
 }
 
 .action-btn {
