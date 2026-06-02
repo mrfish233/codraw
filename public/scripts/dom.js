@@ -17,6 +17,7 @@ export const dom = {
     myAvatarIndicator: document.getElementById('my-avatar-indicator'),
     inviteBtn: document.getElementById('invite-btn'),
     toggleChatBtn: document.getElementById('toggle-chat-btn'),
+    toggleModeBtn: document.getElementById('toggle-mode-btn'),
     
     // Sidebar drawer elements
     chatSidebar: document.getElementById('chat-sidebar'),

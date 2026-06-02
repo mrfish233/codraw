@@ -194,6 +194,15 @@ export function handleStart(e) {
     const isPanTool = state.currentTool === 'pan';
     const isExportAreaTool = state.currentTool === 'export-area';
     
+    // In View Mode, we restrict standard drawings but allow panning and selection area cropping
+    if (state.isViewMode && !isExportAreaTool && !state.isSpacePressed && !isMiddleClick && !isPanTool) {
+        state.isPanning = true;
+        const screenCoord = getCoordinates(e);
+        state.panStart = screenCoord;
+        if (dom.canvas) dom.canvas.style.cursor = 'grabbing';
+        return;
+    }
+    
     // Selection tool init
     if (isExportAreaTool) {
         state.isSelectingArea = true;
@@ -332,7 +341,7 @@ export function handleEnd() {
     if (state.isPanning) {
         state.isPanning = false;
         if (dom.canvas) {
-            dom.canvas.style.cursor = state.isSpacePressed || state.currentTool === 'pan' ? 'grab' : 'crosshair';
+            dom.canvas.style.cursor = (state.isViewMode || state.isSpacePressed || state.currentTool === 'pan') ? 'grab' : 'crosshair';
         }
         return;
     }

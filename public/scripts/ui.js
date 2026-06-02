@@ -527,4 +527,51 @@ export function bindUiEvents() {
         });
     }
 
+    // Toggle View/Edit Mode Button Toggler
+    if (dom.toggleModeBtn) {
+        dom.toggleModeBtn.addEventListener('click', () => {
+            state.isViewMode = !state.isViewMode;
+            
+            // Strip entrance animations to allow custom CSS class transitions to trigger seamlessly
+            const toolbarContainer = document.getElementById('drawing-toolbar');
+            const actionsBar = document.getElementById('actions-bar');
+            if (toolbarContainer) toolbarContainer.classList.remove('animate-slide-left');
+            if (actionsBar) actionsBar.classList.remove('animate-slide-up');
+            
+            // Toggle .view-mode class on app-container
+            if (dom.appContainer) {
+                dom.appContainer.classList.toggle('view-mode', state.isViewMode);
+            }
+            
+            if (state.isViewMode) {
+                // View Mode active
+                dom.toggleModeBtn.classList.add('active-view');
+                dom.toggleModeBtn.querySelector('span').textContent = 'Edit Mode';
+                dom.toggleModeBtn.setAttribute('title', 'Switch to Edit Mode');
+                
+                // Replace eye icon with pencil icon
+                dom.toggleModeBtn.querySelector('svg').innerHTML = '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path>';
+                
+                showToast("Whiteboard locked in View-Only Mode!");
+                
+                if (dom.canvas) {
+                    dom.canvas.style.cursor = 'grab';
+                }
+            } else {
+                // Edit Mode active
+                dom.toggleModeBtn.classList.remove('active-view');
+                dom.toggleModeBtn.querySelector('span').textContent = 'View Mode';
+                dom.toggleModeBtn.setAttribute('title', 'Switch to View Mode');
+                
+                // Replace pencil icon back with eye icon
+                dom.toggleModeBtn.querySelector('svg').innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+                
+                showToast("Whiteboard unlocked! Edit Mode active.");
+                
+                if (dom.canvas) {
+                    dom.canvas.style.cursor = state.currentTool === 'pan' ? 'grab' : 'crosshair';
+                }
+            }
+        });
+    }
 }

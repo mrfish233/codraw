@@ -8,6 +8,7 @@ export const state = {
     myColor: '#6366f1',
     
     // Tools & brush settings
+    isViewMode: false,
     isDrawing: false,
     currentTool: 'brush', // brush, line, rect, circle, eraser, pan, export-area
     currentColor: '#6366f1',
