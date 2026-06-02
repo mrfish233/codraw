@@ -147,8 +147,13 @@ io.on('connection', (socket) => {
             }
         }
 
-        // Broadcast full history updated event so clients re-render
-        io.to(currentRoom).emit('history-updated', history);
+    });
+
+    // Update full history (e.g. for selection delete actions)
+    socket.on('update-room-history', (newHistory) => {
+        if (!currentRoom || !rooms[currentRoom] || !newHistory) return;
+        rooms[currentRoom].history = newHistory;
+        io.to(currentRoom).emit('history-updated', newHistory);
     });
 
     // Cursor movement real-time tracking

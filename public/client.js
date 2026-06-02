@@ -108,6 +108,12 @@ function redraw() {
     const dpr = window.devicePixelRatio || 1;
     ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
     
+    // Toggle the Delete Selected button visibility dynamically based on active selection bounds
+    const deleteSelectedBtn = document.getElementById('action-delete-selected');
+    if (deleteSelectedBtn) {
+        deleteSelectedBtn.style.display = (exportSelection && exportSelection.x !== undefined) ? 'flex' : 'none';
+    }
+    
     // Shift the CSS dot grid background in absolute sync with board movement
     if (gridOverlay) {
         gridOverlay.style.backgroundPosition = `${offsetX}px ${offsetY}px`;
@@ -821,6 +827,100 @@ gridActionBtn.addEventListener('click', () => {
     } else {
         gridActionBtn.classList.remove('active');
         gridOverlay.style.display = 'none';
+    }
+});
+
+// Delete Drawings in Selection Area trigger
+document.getElementById('action-delete-selected').addEventListener('click', () => {
+    if (!exportSelection || exportSelection.x === undefined) return;
+    
+    if (confirm("Are you sure you want to delete all drawings inside the selected area?")) {
+        const sel = exportSelection;
+        const newActions = [];
+        let deletedAny = false;
+        
+        history.forEach(action => {
+            if (action.tool === 'brush' || action.tool === 'eraser') {
+                // Brush paths: slice/split segments outside selection
+                let segments = [];
+                let currentSegment = [];
+                
+                action.points.forEach(p => {
+                    const isInside = (p.x >= sel.x && p.x <= sel.x + sel.w && p.y >= sel.y && p.y <= sel.y + sel.h);
+                    if (isInside) {
+                        if (currentSegment.length >= 2) {
+                            segments.push(currentSegment);
+                        }
+                        currentSegment = [];
+                        deletedAny = true;
+                    } else {
+                        currentSegment.push(p);
+                    }
+                });
+                
+                if (currentSegment.length >= 2) {
+                    segments.push(currentSegment);
+                }
+                
+                if (segments.length === 0) {
+                    // Entirely deleted
+                    deletedAny = true;
+                } else {
+                    segments.forEach((seg, index) => {
+                        newActions.push({
+                            ...action,
+                            id: action.id + '-' + index,
+                            points: seg
+                        });
+                    });
+                }
+            } else {
+                // Shapes (line, rect, circle): delete if bounding box intersects selection
+                let shapeX, shapeY, shapeW, shapeH;
+                
+                if (action.tool === 'line') {
+                    shapeX = Math.min(action.start.x, action.end.x);
+                    shapeY = Math.min(action.start.y, action.end.y);
+                    shapeW = Math.abs(action.start.x - action.end.x);
+                    shapeH = Math.abs(action.start.y - action.end.y);
+                } else if (action.tool === 'rect') {
+                    shapeX = Math.min(action.start.x, action.end.x);
+                    shapeY = Math.min(action.start.y, action.end.y);
+                    shapeW = Math.abs(action.start.x - action.end.x);
+                    shapeH = Math.abs(action.start.y - action.end.y);
+                } else if (action.tool === 'circle') {
+                    const dx = action.end.x - action.start.x;
+                    const dy = action.end.y - action.start.y;
+                    const r = Math.sqrt(dx * dx + dy * dy);
+                    shapeX = action.start.x - r;
+                    shapeY = action.start.y - r;
+                    shapeW = r * 2;
+                    shapeH = r * 2;
+                }
+                
+                const intersects = (shapeX < sel.x + sel.w && shapeX + shapeW > sel.x && shapeY < sel.y + sel.h && shapeY + shapeH > sel.y);
+                if (intersects) {
+                    deletedAny = true; // Dropped from history
+                } else {
+                    newActions.push(action);
+                }
+            }
+        });
+        
+        if (deletedAny) {
+            history = newActions;
+            redraw();
+            
+            // Sync updated history to the websocket server so all peers reflect it
+            socket.emit('update-room-history', history);
+            showToast("Drawings inside selected area deleted!");
+        } else {
+            showToast("No drawings found inside selected area.");
+        }
+        
+        // Clear selection overlay
+        exportSelection = null;
+        redraw();
     }
 });
 
