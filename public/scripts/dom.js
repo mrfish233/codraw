@@ -37,6 +37,7 @@ export const dom = {
     // Bottom actions bar
     actionsBar: document.getElementById('actions-bar'),
     undoBtn: document.getElementById('action-undo'),
+    redoBtn: document.getElementById('action-redo'),
     gridBtn: document.getElementById('action-grid'),
     deleteSelectedBtn: document.getElementById('action-delete-selected'),
     clearBtn: document.getElementById('action-clear'),

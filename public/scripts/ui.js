@@ -139,6 +139,14 @@ export function bindUiEvents() {
         });
     }
 
+    // Redo
+    if (dom.redoBtn) {
+        dom.redoBtn.addEventListener('click', () => {
+            console.log("Redo button clicked on client!");
+            socket.emit('redo-action');
+        });
+    }
+
     // Grid overlays
     if (dom.gridBtn && dom.gridOverlay) {
         dom.gridBtn.addEventListener('click', () => {

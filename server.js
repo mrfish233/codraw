@@ -195,6 +195,49 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Redo action (reverts history to the snapshot stored in the redo stack)
+    socket.on('redo-action', () => {
+        console.log(`[REDO] Server received redo-action from client: ${socket.id} in room: ${currentRoom}`);
+        if (!currentRoom || !rooms[currentRoom]) {
+            console.log("[REDO] Room not found or invalid!");
+            return;
+        }
+
+        const room = rooms[currentRoom];
+        const redoStack = room.redoStack;
+        console.log(`[REDO] Current redo stack size: ${redoStack.length}`);
+        
+        // Find the index of the last action committed by this socket in the redo stack
+        let foundIndex = -1;
+        for (let i = redoStack.length - 1; i >= 0; i--) {
+            console.log(`[REDO] Index ${i}: owner is ${redoStack[i].userId}`);
+            if (redoStack[i].userId === socket.id) {
+                foundIndex = i;
+                break;
+            }
+        }
+
+        console.log(`[REDO] Search result index: ${foundIndex}`);
+
+        if (foundIndex !== -1) {
+            // Save current state to undo stack before applying redo
+            room.undoStack.push({
+                userId: socket.id,
+                historySnapshot: JSON.parse(JSON.stringify(room.history))
+            });
+            
+            // Revert history to the redo snapshot
+            const redoEntry = redoStack.splice(foundIndex, 1)[0];
+            room.history = redoEntry.historySnapshot;
+            console.log(`[REDO] Redo snapshot applied successfully! Restored history items count: ${room.history.length}`);
+            
+            // Broadcast full history updated event so clients re-render
+            io.to(currentRoom).emit('history-updated', room.history);
+        } else {
+            console.log("[REDO] No matching redo entry found for this user!");
+        }
+    });
+
     // Update full history (e.g. for selection delete actions)
     socket.on('update-room-history', (newHistory) => {
         if (!currentRoom || !rooms[currentRoom] || !newHistory) return;
