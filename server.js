@@ -20,6 +20,26 @@ app.get('/room/:roomId', (req, res) => {
 // In-memory database for room drawing history and active users
 const rooms = {};
 
+// Helper to push history state to room's undo stack
+function pushToUndoStack(roomId, socketId) {
+    const room = rooms[roomId];
+    if (!room) return;
+    
+    // Push the current history snapshot
+    room.undoStack.push({
+        userId: socketId,
+        historySnapshot: JSON.parse(JSON.stringify(room.history))
+    });
+    
+    // Restrict stack size to avoid memory bloat
+    if (room.undoStack.length > 50) {
+        room.undoStack.shift();
+    }
+    
+    // Clear redo stack
+    room.redoStack = [];
+}
+
 // Helper to generate a unique cool animal name
 const coolNames = [
     "Creative Dolphin", "Artistic Tiger", "Crafty Koala", "Sketching Fox",
@@ -46,7 +66,9 @@ io.on('connection', (socket) => {
         if (!rooms[currentRoom]) {
             rooms[currentRoom] = {
                 history: [],
-                users: {}
+                users: {},
+                undoStack: [],
+                redoStack: []
             };
         }
 
@@ -109,6 +131,9 @@ io.on('connection', (socket) => {
     socket.on('commit-action', (action) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
+        // Save state before committing new drawing action
+        pushToUndoStack(currentRoom, socket.id);
+        
         // Attach socket id as owner
         action.userId = socket.id;
         rooms[currentRoom].history.push(action);
@@ -130,28 +155,53 @@ io.on('connection', (socket) => {
     // Clear Canvas
     socket.on('clear-canvas', () => {
         if (!currentRoom || !rooms[currentRoom]) return;
+        
+        // Save state before clearing canvas
+        pushToUndoStack(currentRoom, socket.id);
+        
         rooms[currentRoom].history = [];
         io.to(currentRoom).emit('canvas-cleared');
     });
 
-    // Undo action (removes the last action by this user)
+    // Undo action (reverts history to the state before this user's last action)
     socket.on('undo-action', () => {
         if (!currentRoom || !rooms[currentRoom]) return;
 
-        const history = rooms[currentRoom].history;
-        // Search backwards for the last action owned by this user
-        for (let i = history.length - 1; i >= 0; i--) {
-            if (history[i].userId === socket.id) {
-                history.splice(i, 1);
+        const room = rooms[currentRoom];
+        const undoStack = room.undoStack;
+        
+        // Find the index of the last action committed by this socket
+        let foundIndex = -1;
+        for (let i = undoStack.length - 1; i >= 0; i--) {
+            if (undoStack[i].userId === socket.id) {
+                foundIndex = i;
                 break;
             }
         }
 
+        if (foundIndex !== -1) {
+            // Save current state to redo stack
+            room.redoStack.push({
+                userId: socket.id,
+                historySnapshot: JSON.parse(JSON.stringify(room.history))
+            });
+            
+            // Revert history to the snapshot stored BEFORE the action
+            const undoEntry = undoStack.splice(foundIndex, 1)[0];
+            room.history = undoEntry.historySnapshot;
+            
+            // Broadcast full history updated event so clients re-render
+            io.to(currentRoom).emit('history-updated', room.history);
+        }
     });
 
     // Update full history (e.g. for selection delete actions)
     socket.on('update-room-history', (newHistory) => {
         if (!currentRoom || !rooms[currentRoom] || !newHistory) return;
+        
+        // Save state before updating full history
+        pushToUndoStack(currentRoom, socket.id);
+        
         rooms[currentRoom].history = newHistory;
         io.to(currentRoom).emit('history-updated', newHistory);
     });

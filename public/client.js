@@ -804,16 +804,7 @@ document.getElementById('fill-shape').addEventListener('change', (e) => {
 
 // Undo button
 document.getElementById('action-undo').addEventListener('click', () => {
-    // Search backward to remove our own last path locally
-    for (let i = history.length - 1; i >= 0; i--) {
-        if (history[i].userId === socket.id) {
-            history.splice(i, 1);
-            break;
-        }
-    }
-    redraw();
-    
-    // Request undo synchronizer on server
+    // Authoritative undo: emit to server transaction stack, which pops snapshot and broadcasts history-updated
     socket.emit('undo-action');
 });
 
