@@ -2,7 +2,7 @@
 
 import { state, loadLocalProfile, loadLocalHistory } from './state.js';
 import { dom } from './dom.js';
-import { initRoomConnection, registerSocketListeners } from './socket.js';
+import { socket, initRoomConnection, registerSocketListeners } from './socket.js';
 import { resizeCanvas, handleStart, handleMove, handleEnd, redraw } from './canvas.js';
 import { bindChatEvents } from './chat.js';
 import { bindMinimapEvents } from './minimap.js';
@@ -21,16 +21,39 @@ function bootstrapApplication() {
         window.addEventListener('touchend', handleEnd);
     }
     
-    // 2. Keyboard spacebar panning shortcuts
+    // 2. Keyboard shortcuts (Spacebar Panning, Undo & Redo)
     window.addEventListener('keydown', (e) => {
+        const activeTag = document.activeElement.tagName;
+        // Ignore whiteboard shortcuts if typing inside text fields
+        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
+            return;
+        }
+        
         if (e.code === 'Space') {
-            const activeTag = document.activeElement.tagName;
-            if (activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
+            e.preventDefault();
+            if (!state.isSpacePressed) {
+                state.isSpacePressed = true;
+                if (dom.canvas) dom.canvas.style.cursor = 'grab';
+            }
+        }
+        
+        // Command key on macOS, Control key on Windows/Linux
+        const isCmdOrCtrl = e.ctrlKey || e.metaKey;
+        
+        if (isCmdOrCtrl) {
+            if (e.key === 'z' || e.key === 'Z') {
                 e.preventDefault();
-                if (!state.isSpacePressed) {
-                    state.isSpacePressed = true;
-                    if (dom.canvas) dom.canvas.style.cursor = 'grab';
+                if (e.shiftKey) {
+                    // Ctrl+Shift+Z / Cmd+Shift+Z: Redo
+                    socket.emit('redo-action');
+                } else {
+                    // Ctrl+Z / Cmd+Z: Undo
+                    socket.emit('undo-action');
                 }
+            } else if (e.key === 'y' || e.key === 'Y') {
+                // Ctrl+Y / Cmd+Y: Redo
+                e.preventDefault();
+                socket.emit('redo-action');
             }
         }
     });
