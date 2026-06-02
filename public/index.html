@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoDraw — Collaborative Real-Time Whiteboard & Canvas</title>
+    <meta name="description" content="CoDraw is a premium, real-time collaborative whiteboard that lets you draw anything with anyone. Create an instant share link and sketch together, talk in chat, and track cursors in real-time.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <!-- Background glow elements -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <!-- Main Application UI -->
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header id="main-header" class="glass-panel animate-fade-in">
+            <div class="header-left">
+                <div class="logo">
+                    <span class="logo-icon">✏️</span>
+                    <h1>CoDraw</h1>
+                    <span class="badge">Live</span>
+                </div>
+            </div>
+            
+            <div class="header-center">
+                <!-- Room info & Share -->
+                <div class="room-indicator">
+                    <span class="indicator-dot blinking"></span>
+                    <span class="room-label">Room:</span>
+                    <span id="room-id-display" class="room-value">Connecting...</span>
+                </div>
+                <button id="invite-btn" class="btn btn-primary" title="Copy Invite Link">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-share-2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                    <span>Invite Collaborators</span>
+                </button>
+            </div>
+
+            <div class="header-right">
+                <!-- User Profile Controls -->
+                <div class="user-profile-badge" id="profile-trigger">
+                    <div class="user-avatar" id="my-avatar-indicator" style="background-color: #6366f1;"></div>
+                    <span id="my-name-display" class="username-text">Anonymous</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chevron"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+            </div>
+        </header>
+
+        <!-- Canvas Workspace -->
+        <main class="canvas-workspace">
+            <canvas id="paint-canvas"></canvas>
+            <div id="grid-overlay" class="grid-background active"></div>
+            
+            <!-- Real-time Peer Cursors Overlay Container -->
+            <div id="cursors-container"></div>
+        </main>
+
+        <!-- Left Toolbar (Drawing Tools) -->
+        <aside id="drawing-toolbar" class="glass-panel floating-toolbar animate-slide-left">
+            <div class="tool-section">
+                <h3>Tools</h3>
+                <div class="tool-grid">
+                    <button id="tool-brush" class="tool-btn active" title="Brush (Freehand)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M7.5 10.5c.83-.83 2-.83 2.83 0s.83 2 0 2.83l-3.5 3.5H4v-2.83l3.5-3.5z"></path><path d="M12 6c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"></path></svg>
+                    </button>
+                    <button id="tool-line" class="tool-btn" title="Line">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"></line></svg>
+                    </button>
+                    <button id="tool-rect" class="tool-btn" title="Rectangle">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                    </button>
+                    <button id="tool-circle" class="tool-btn" title="Circle">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle></svg>
+                    </button>
+                    <button id="tool-eraser" class="tool-btn" title="Eraser">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5V21H6V8.5L12 3l6 5.5z"></path><path d="M6 13h12"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="tool-divider"></div>
+
+            <div class="tool-section">
+                <h3>Style</h3>
+                <!-- Color Selector -->
+                <div class="color-picker-container">
+                    <label>Color</label>
+                    <div class="preset-colors">
+                        <button class="color-dot active" style="background-color: #6366f1;" data-color="#6366f1"></button>
+                        <button class="color-dot" style="background-color: #ec4899;" data-color="#ec4899"></button>
+                        <button class="color-dot" style="background-color: #10b981;" data-color="#10b981"></button>
+                        <button class="color-dot" style="background-color: #f59e0b;" data-color="#f59e0b"></button>
+                        <button class="color-dot" style="background-color: #ef4444;" data-color="#ef4444"></button>
+                        <button class="color-dot" style="background-color: #ffffff;" data-color="#ffffff"></button>
+                    </div>
+                    <div class="custom-color-row">
+                        <input type="color" id="custom-color" value="#6366f1">
+                        <span>Custom Hex</span>
+                    </div>
+                </div>
+
+                <!-- Size Slider -->
+                <div class="range-slider-container">
+                    <div class="slider-label">
+                        <span>Size</span>
+                        <span id="brush-size-val">5px</span>
+                    </div>
+                    <input type="range" id="brush-size" min="1" max="50" value="5" class="custom-slider">
+                </div>
+
+                <!-- Opacity Slider -->
+                <div class="range-slider-container">
+                    <div class="slider-label">
+                        <span>Opacity</span>
+                        <span id="brush-opacity-val">100%</span>
+                    </div>
+                    <input type="range" id="brush-opacity" min="10" max="100" value="100" class="custom-slider">
+                </div>
+
+                <!-- Fill Checkbox (for rect / circle) -->
+                <div class="checkbox-container">
+                    <label class="custom-checkbox">
+                        <input type="checkbox" id="fill-shape">
+                        <span class="checkmark"></span>
+                        Fill Shapes
+                    </label>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Sidebar (Collaborators & Chat) -->
+        <aside id="chat-sidebar" class="glass-panel floating-sidebar animate-slide-right">
+            <div class="tabs-header">
+                <button id="tab-chat" class="tab-btn active">Live Chat</button>
+                <button id="tab-users" class="tab-btn">Collaborators (<span id="user-count">1</span>)</button>
+            </div>
+
+            <!-- Chat Content -->
+            <div id="chat-content" class="tab-pane active">
+                <div id="chat-messages" class="chat-messages-container">
+                    <div class="system-message">Welcome to CoDraw! Send a message or share the invite link to start collaborating.</div>
+                </div>
+                <form id="chat-form" class="chat-input-container">
+                    <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+                    <button type="submit" class="btn btn-circle">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Users List Content -->
+            <div id="users-content" class="tab-pane">
+                <div class="users-list-container" id="collaborators-list">
+                    <!-- Dynamic rendering -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Bottom Action Bar (Canvas Operations) -->
+        <div id="actions-bar" class="glass-panel floating-actions animate-slide-up">
+            <button id="action-undo" class="action-btn" title="Undo Last Action">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>
+                <span>Undo</span>
+            </button>
+            <button id="action-grid" class="action-btn active" title="Toggle Grid Background">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
+                <span>Grid</span>
+            </button>
+            <button id="action-clear" class="action-btn btn-danger" title="Clear Canvas for Everyone">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                <span>Clear</span>
+            </button>
+            <div class="action-divider"></div>
+            <button id="action-export" class="action-btn btn-success" title="Export Canvas to File">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Export</span>
+            </button>
+        </div>
+
+        <!-- Custom Username Modal/Overlay -->
+        <div id="username-modal" class="modal-overlay">
+            <div class="modal-card glass-panel">
+                <h2>Join Whiteboard Session</h2>
+                <p>Welcome to CoDraw! Enter your name and choose a profile color to connect with your collaborators.</p>
+                <div class="form-group">
+                    <label for="modal-username">Your Nickname</label>
+                    <input type="text" id="modal-username" placeholder="Creative Picasso" maxlength="25">
+                </div>
+                <div class="form-group">
+                    <label>Choose Color</label>
+                    <div id="modal-colors" class="preset-colors">
+                        <button class="color-dot active" style="background-color: #6366f1;" data-color="#6366f1"></button>
+                        <button class="color-dot" style="background-color: #ec4899;" data-color="#ec4899"></button>
+                        <button class="color-dot" style="background-color: #10b981;" data-color="#10b981"></button>
+                        <button class="color-dot" style="background-color: #f59e0b;" data-color="#f59e0b"></button>
+                        <button class="color-dot" style="background-color: #ef4444;" data-color="#ef4444"></button>
+                        <button class="color-dot" style="background-color: #a855f7;" data-color="#a855f7"></button>
+                    </div>
+                </div>
+                <button id="modal-submit" class="btn btn-primary btn-block">Start Drawing</button>
+            </div>
+        </div>
+
+        <!-- Username Editor Dropdown Menu -->
+        <div id="profile-dropdown" class="profile-dropdown glass-panel">
+            <h3>Profile Settings</h3>
+            <div class="dropdown-group">
+                <label for="settings-username">Nickname</label>
+                <input type="text" id="settings-username" maxlength="25">
+            </div>
+            <div class="dropdown-group">
+                <label>Profile Color</label>
+                <div id="settings-colors" class="preset-colors">
+                    <button class="color-dot" style="background-color: #6366f1;" data-color="#6366f1"></button>
+                    <button class="color-dot" style="background-color: #ec4899;" data-color="#ec4899"></button>
+                    <button class="color-dot" style="background-color: #10b981;" data-color="#10b981"></button>
+                    <button class="color-dot" style="background-color: #f59e0b;" data-color="#f59e0b"></button>
+                    <button class="color-dot" style="background-color: #ef4444;" data-color="#ef4444"></button>
+                    <button class="color-dot" style="background-color: #a855f7;" data-color="#a855f7"></button>
+                </div>
+            </div>
+            <button id="settings-save" class="btn btn-primary btn-sm btn-block">Save Changes</button>
+        </div>
+
+        <!-- Sleek Toast Notification -->
+        <div id="toast" class="toast glass-panel">
+            <span id="toast-message">Success! Link copied.</span>
+        </div>
+    </div>
+
+    <!-- Socket.io client script -->
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- Frontend logic -->
+    <script src="/client.js"></script>
+</body>
+</html>
