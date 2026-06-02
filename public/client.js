@@ -817,8 +817,10 @@ gridActionBtn.addEventListener('click', () => {
     const isShowing = gridOverlay.classList.toggle('active');
     if (isShowing) {
         gridActionBtn.classList.add('active');
+        gridOverlay.style.display = 'block';
     } else {
         gridActionBtn.classList.remove('active');
+        gridOverlay.style.display = 'none';
     }
 });
 

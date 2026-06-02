@@ -260,7 +260,7 @@ header {
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 11;
+    z-index: 13; /* Placed on top of paint-canvas (z-index 12) for guaranteed visibility, pointer-events are disabled */
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.3s ease;
@@ -268,7 +268,7 @@ header {
 
 .grid-background.active {
     opacity: 1;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px);
     background-size: 24px 24px;
 }
 
