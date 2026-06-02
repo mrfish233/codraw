@@ -196,7 +196,7 @@ export function getCoordinates(e) {
     };
 }
 
-// Helper to update current drawing coordinates, applying a square constraint to the rectangle or circle (ellipse) tool if Shift is held
+// Helper to update current drawing coordinates, applying a square constraint to the rectangle or circle (ellipse) tool, or H/V constraint to the line tool if Shift is held
 export function updateCurrentPoint(worldCoord, isShiftPressed) {
     state.isShiftPressed = !!isShiftPressed;
     state.currentRawPoint = worldCoord;
@@ -209,14 +209,30 @@ export function updateCurrentPoint(worldCoord, isShiftPressed) {
             x: state.startPoint.x + (dx >= 0 ? 1 : -1) * side,
             y: state.startPoint.y + (dy >= 0 ? 1 : -1) * side
         };
+    } else if (state.currentTool === 'line' && state.isShiftPressed) {
+        const dx = worldCoord.x - state.startPoint.x;
+        const dy = worldCoord.y - state.startPoint.y;
+        if (Math.abs(dx) > Math.abs(dy)) {
+            // Snap to Horizontal
+            state.currentPoint = {
+                x: worldCoord.x,
+                y: state.startPoint.y
+            };
+        } else {
+            // Snap to Vertical
+            state.currentPoint = {
+                x: state.startPoint.x,
+                y: worldCoord.y
+            };
+        }
     } else {
         state.currentPoint = worldCoord;
     }
 }
 
-// Handles Shift key state changes to dynamically toggle square/circle constraints for active previews
+// Handles Shift key state changes to dynamically toggle square/circle/line constraints for active previews
 export function handleShiftChange(isShiftPressed) {
-    if (!state.isDrawing || !['rect', 'circle'].includes(state.currentTool)) return;
+    if (!state.isDrawing || !['rect', 'circle', 'line'].includes(state.currentTool)) return;
     
     updateCurrentPoint(state.currentRawPoint, isShiftPressed);
     
