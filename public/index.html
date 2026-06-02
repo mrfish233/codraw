@@ -251,6 +251,18 @@
             </div>
         </div>
 
+        <!-- Custom Confirmation Modal -->
+        <div id="confirm-modal" class="modal-overlay">
+            <div class="modal-card glass-panel" style="width: 400px; padding: 28px; text-align: center;">
+                <h2 id="confirm-title" style="font-size: 20px; font-weight: 800; margin-bottom: 12px; background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Confirm Action</h2>
+                <p id="confirm-message" style="margin-bottom: 24px; font-size: 13.5px; line-height: 1.5; color: var(--text-secondary);">Are you sure you want to proceed?</p>
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                    <button id="confirm-cancel" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+                    <button id="confirm-submit" class="btn btn-danger" style="flex: 1;">Confirm</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Username Editor Dropdown Menu -->
         <div id="profile-dropdown" class="profile-dropdown glass-panel">
             <h3>Profile Settings</h3>

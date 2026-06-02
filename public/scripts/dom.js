@@ -52,5 +52,12 @@ export const dom = {
     settingsUsernameInput: document.getElementById('settings-username'),
     settingsSaveBtn: document.getElementById('settings-save'),
     toastElement: document.getElementById('toast'),
-    toastMessage: document.getElementById('toast-message')
+    toastMessage: document.getElementById('toast-message'),
+    
+    // Custom Confirmation Modal elements
+    confirmModal: document.getElementById('confirm-modal'),
+    confirmTitle: document.getElementById('confirm-title'),
+    confirmMessage: document.getElementById('confirm-message'),
+    confirmCancelBtn: document.getElementById('confirm-cancel'),
+    confirmSubmitBtn: document.getElementById('confirm-submit')
 };

@@ -885,6 +885,18 @@ header {
     transform: scale(1.05);
 }
 
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+}
+
 .btn-danger {
     background: rgba(239, 68, 68, 0.1);
     color: #fca5a5;

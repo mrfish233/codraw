@@ -17,6 +17,34 @@ export function showToast(message) {
     }, 3000);
 }
 
+// Shows a custom web-based confirmation modal instead of browser-native confirm()
+export function showConfirm(title, message, onConfirm) {
+    if (!dom.confirmModal || !dom.confirmTitle || !dom.confirmMessage || !dom.confirmCancelBtn || !dom.confirmSubmitBtn) return;
+    
+    dom.confirmTitle.textContent = title;
+    dom.confirmMessage.textContent = message;
+    dom.confirmModal.classList.add('active');
+    
+    // Cleanup any existing event listeners to prevent duplicate triggers
+    const cleanup = () => {
+        dom.confirmCancelBtn.removeEventListener('click', handleCancel);
+        dom.confirmSubmitBtn.removeEventListener('click', handleSubmit);
+        dom.confirmModal.classList.remove('active');
+    };
+    
+    const handleCancel = () => {
+        cleanup();
+    };
+    
+    const handleSubmit = () => {
+        cleanup();
+        if (onConfirm) onConfirm();
+    };
+    
+    dom.confirmCancelBtn.addEventListener('click', handleCancel);
+    dom.confirmSubmitBtn.addEventListener('click', handleSubmit);
+}
+
 // Binds all interface event listeners (Buttons, Dropdowns, sliders, tabs)
 export function bindUiEvents() {
     // ----------------------------------------------------
@@ -166,100 +194,108 @@ export function bindUiEvents() {
         dom.deleteSelectedBtn.addEventListener('click', () => {
             if (!state.exportSelection || state.exportSelection.x === undefined) return;
             
-            if (confirm("Are you sure you want to delete all drawings inside the selected area?")) {
-                const sel = state.exportSelection;
-                const newActions = [];
-                let deletedAny = false;
-                
-                state.history.forEach(action => {
-                    if (action.tool === 'brush' || action.tool === 'eraser') {
-                        // Segment stroke slicing
-                        let segments = [];
-                        let currentSegment = [];
-                        
-                        action.points.forEach(p => {
-                            const isInside = (p.x >= sel.x && p.x <= sel.x + sel.w && p.y >= sel.y && p.y <= sel.y + sel.h);
-                            if (isInside) {
-                                if (currentSegment.length >= 2) {
-                                    segments.push(currentSegment);
+            showConfirm(
+                "Delete Selection?",
+                "Are you sure you want to delete all drawings inside the selected area?",
+                () => {
+                    const sel = state.exportSelection;
+                    const newActions = [];
+                    let deletedAny = false;
+                    
+                    state.history.forEach(action => {
+                        if (action.tool === 'brush' || action.tool === 'eraser') {
+                            // Segment stroke slicing
+                            let segments = [];
+                            let currentSegment = [];
+                            
+                            action.points.forEach(p => {
+                                const isInside = (p.x >= sel.x && p.x <= sel.x + sel.w && p.y >= sel.y && p.y <= sel.y + sel.h);
+                                if (isInside) {
+                                    if (currentSegment.length >= 2) {
+                                        segments.push(currentSegment);
+                                    }
+                                    currentSegment = [];
+                                    deletedAny = true;
+                                } else {
+                                    currentSegment.push(p);
                                 }
-                                currentSegment = [];
+                            });
+                            
+                            if (currentSegment.length >= 2) {
+                                segments.push(currentSegment);
+                            }
+                            
+                            if (segments.length === 0) {
                                 deletedAny = true;
                             } else {
-                                currentSegment.push(p);
-                            }
-                        });
-                        
-                        if (currentSegment.length >= 2) {
-                            segments.push(currentSegment);
-                        }
-                        
-                        if (segments.length === 0) {
-                            deletedAny = true;
-                        } else {
-                            segments.forEach((seg, index) => {
-                                newActions.push({
-                                    ...action,
-                                    id: action.id + '-' + index,
-                                    points: seg
+                                segments.forEach((seg, index) => {
+                                    newActions.push({
+                                        ...action,
+                                        id: action.id + '-' + index,
+                                        points: seg
+                                    });
                                 });
-                            });
-                        }
-                    } else {
-                        // Shapes intersection checks
-                        let shapeX, shapeY, shapeW, shapeH;
-                        
-                        if (action.tool === 'line') {
-                            shapeX = Math.min(action.start.x, action.end.x);
-                            shapeY = Math.min(action.start.y, action.end.y);
-                            shapeW = Math.abs(action.start.x - action.end.x);
-                            shapeH = Math.abs(action.start.y - action.end.y);
-                        } else if (action.tool === 'rect') {
-                            shapeX = Math.min(action.start.x, action.end.x);
-                            shapeY = Math.min(action.start.y, action.end.y);
-                            shapeW = Math.abs(action.start.x - action.end.x);
-                            shapeH = Math.abs(action.start.y - action.end.y);
-                        } else if (action.tool === 'circle') {
-                            shapeX = Math.min(action.start.x, action.end.x);
-                            shapeY = Math.min(action.start.y, action.end.y);
-                            shapeW = Math.abs(action.start.x - action.end.x);
-                            shapeH = Math.abs(action.start.y - action.end.y);
-                        }
-                        
-                        const intersects = (shapeX < sel.x + sel.w && shapeX + shapeW > sel.x && shapeY < sel.y + sel.h && shapeY + shapeH > sel.y);
-                        if (intersects) {
-                            deletedAny = true;
+                            }
                         } else {
-                            newActions.push(action);
+                            // Shapes intersection checks
+                            let shapeX, shapeY, shapeW, shapeH;
+                            
+                            if (action.tool === 'line') {
+                                shapeX = Math.min(action.start.x, action.end.x);
+                                shapeY = Math.min(action.start.y, action.end.y);
+                                shapeW = Math.abs(action.start.x - action.end.x);
+                                shapeH = Math.abs(action.start.y - action.end.y);
+                            } else if (action.tool === 'rect') {
+                                shapeX = Math.min(action.start.x, action.end.x);
+                                shapeY = Math.min(action.start.y, action.end.y);
+                                shapeW = Math.abs(action.start.x - action.end.x);
+                                shapeH = Math.abs(action.start.y - action.end.y);
+                            } else if (action.tool === 'circle') {
+                                shapeX = Math.min(action.start.x, action.end.x);
+                                shapeY = Math.min(action.start.y, action.end.y);
+                                shapeW = Math.abs(action.start.x - action.end.x);
+                                shapeH = Math.abs(action.start.y - action.end.y);
+                            }
+                            
+                            const intersects = (shapeX < sel.x + sel.w && shapeX + shapeW > sel.x && shapeY < sel.y + sel.h && shapeY + shapeH > sel.y);
+                            if (intersects) {
+                                deletedAny = true;
+                            } else {
+                                newActions.push(action);
+                            }
                         }
+                    });
+                    
+                    if (deletedAny) {
+                        state.history = newActions;
+                        saveLocalHistory();
+                        redraw();
+                        socket.emit('update-room-history', state.history);
+                        showToast("Drawings inside selected area deleted!");
+                    } else {
+                        showToast("No drawings found inside selected area.");
                     }
-                });
-                
-                if (deletedAny) {
-                    state.history = newActions;
-                    saveLocalHistory();
+                    
+                    state.exportSelection = null;
                     redraw();
-                    socket.emit('update-room-history', state.history);
-                    showToast("Drawings inside selected area deleted!");
-                } else {
-                    showToast("No drawings found inside selected area.");
                 }
-                
-                state.exportSelection = null;
-                redraw();
-            }
+            );
         });
     }
 
     // Clear board
     if (dom.clearBtn) {
         dom.clearBtn.addEventListener('click', () => {
-            if (confirm("Are you sure you want to clear the entire collaborative canvas for everyone?")) {
-                state.history = [];
-                saveLocalHistory();
-                redraw();
-                socket.emit('clear-canvas');
-            }
+            showConfirm(
+                "Clear Canvas?",
+                "Are you sure you want to clear the entire collaborative canvas for everyone?",
+                () => {
+                    state.history = [];
+                    saveLocalHistory();
+                    redraw();
+                    socket.emit('clear-canvas');
+                }
+            );
         });
     }
 
