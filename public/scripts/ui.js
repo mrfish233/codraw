@@ -1,6 +1,6 @@
 // CoDraw Interactive User Interface Module
 
-import { state } from './state.js';
+import { state, saveLocalHistory, saveLocalProfile } from './state.js';
 import { dom } from './dom.js';
 import { redraw, resizeCanvas } from './canvas.js';
 import { socket } from './socket.js';
@@ -232,6 +232,7 @@ export function bindUiEvents() {
                 
                 if (deletedAny) {
                     state.history = newActions;
+                    saveLocalHistory();
                     redraw();
                     socket.emit('update-room-history', state.history);
                     showToast("Drawings inside selected area deleted!");
@@ -250,6 +251,7 @@ export function bindUiEvents() {
         dom.clearBtn.addEventListener('click', () => {
             if (confirm("Are you sure you want to clear the entire collaborative canvas for everyone?")) {
                 state.history = [];
+                saveLocalHistory();
                 redraw();
                 socket.emit('clear-canvas');
             }
@@ -407,6 +409,7 @@ export function bindUiEvents() {
             
             state.myUsername = inputName;
             state.myColor = selectedModalColor;
+            saveLocalProfile();
             
             if (dom.settingsUsernameInput) {
                 dom.settingsUsernameInput.value = state.myUsername;
@@ -506,6 +509,7 @@ export function bindUiEvents() {
             if (selectedSettingsColor) {
                 state.myColor = selectedSettingsColor;
             }
+            saveLocalProfile();
             
             if (dom.myNameDisplay) dom.myNameDisplay.textContent = state.myUsername;
             if (dom.myAvatarIndicator) dom.myAvatarIndicator.style.backgroundColor = state.myColor;
@@ -522,4 +526,5 @@ export function bindUiEvents() {
             updateCollaboratorsList();
         });
     }
+
 }

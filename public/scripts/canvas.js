@@ -1,6 +1,6 @@
 // CoDraw Canvas Rendering & Event Handling Module
 
-import { state } from './state.js';
+import { state, saveLocalHistory } from './state.js';
 import { dom } from './dom.js';
 import { drawMinimap } from './minimap.js';
 import { repositionAllPeerCursors } from './collaborators.js';
@@ -369,6 +369,7 @@ export function handleEnd() {
     }
     
     state.history.push(finalizedAction);
+    saveLocalHistory();
     socket.emit('commit-action', finalizedAction);
     
     state.points = [];

@@ -40,3 +40,49 @@ export const state = {
     BOARD_WIDTH: 4000,
     BOARD_HEIGHT: 4000
 };
+
+// Caching helper: Save current whiteboard history snapshot to localStorage
+export function saveLocalHistory() {
+    if (state.roomId && state.history) {
+        localStorage.setItem(`codraw_history_${state.roomId}`, JSON.stringify(state.history));
+    }
+}
+
+// Caching helper: Load whiteboard history from localStorage
+export function loadLocalHistory() {
+    if (state.roomId) {
+        const cached = localStorage.getItem(`codraw_history_${state.roomId}`);
+        if (cached) {
+            try {
+                state.history = JSON.parse(cached);
+                return true;
+            } catch (e) {
+                console.error("Error parsing cached history:", e);
+            }
+        }
+    }
+    return false;
+}
+
+// Caching helper: Save user profile nickname and avatar color to localStorage
+export function saveLocalProfile() {
+    if (state.myUsername) {
+        localStorage.setItem('codraw_username', state.myUsername);
+    }
+    if (state.myColor) {
+        localStorage.setItem('codraw_color', state.myColor);
+    }
+}
+
+// Caching helper: Load user profile credentials from localStorage
+export function loadLocalProfile() {
+    const username = localStorage.getItem('codraw_username');
+    const color = localStorage.getItem('codraw_color');
+    if (username) {
+        state.myUsername = username;
+    }
+    if (color) {
+        state.myColor = color;
+    }
+    return !!username;
+}

@@ -1,6 +1,6 @@
 // CoDraw Websocket Communication & Synchronization Module
 
-import { state } from './state.js';
+import { state, saveLocalHistory, saveLocalProfile } from './state.js';
 import { dom } from './dom.js';
 import { redraw } from './canvas.js';
 import { appendChatMessage, appendSystemMessage } from './chat.js';
@@ -46,8 +46,15 @@ export function registerSocketListeners() {
     // Authority connection state init
     socket.on('init-room', (initData) => {
         state.userId = initData.userId;
-        state.history = initData.history;
         state.usersList = initData.users;
+        
+        // Restore room drawings if server history was cleared (e.g. server restarted) but client has cached drawings
+        if ((!initData.history || initData.history.length === 0) && state.history && state.history.length > 0) {
+            socket.emit('update-room-history', state.history);
+        } else {
+            state.history = initData.history || [];
+            saveLocalHistory();
+        }
         
         // Custom name configuration on initial room entry
         if (!state.myUsername) {
@@ -62,6 +69,19 @@ export function registerSocketListeners() {
             
             // Show interactive welcome screen
             if (dom.usernameModal) dom.usernameModal.classList.add('active');
+        } else {
+            // Tell server about our cached username and color!
+            socket.emit('update-username', state.myUsername);
+            socket.emit('update-color', state.myColor);
+            
+            // Sync current state to DOM
+            if (dom.modalUsernameInput) dom.modalUsernameInput.value = state.myUsername;
+            if (dom.settingsUsernameInput) dom.settingsUsernameInput.value = state.myUsername;
+            if (dom.myNameDisplay) dom.myNameDisplay.textContent = state.myUsername;
+            if (dom.myAvatarIndicator) dom.myAvatarIndicator.style.backgroundColor = state.myColor;
+            
+            // Hide welcome screen since we already have credentials
+            if (dom.usernameModal) dom.usernameModal.classList.remove('active');
         }
         
         // Build active collaboration list
@@ -129,6 +149,7 @@ export function registerSocketListeners() {
     // Action committed broadcast received
     socket.on('receive-action', (action) => {
         state.history.push(action);
+        saveLocalHistory();
         
         if (action.userId) {
             delete state.activeDrawings[action.userId];
@@ -154,6 +175,7 @@ export function registerSocketListeners() {
     // Global clear board command from peer
     socket.on('canvas-cleared', () => {
         state.history = [];
+        saveLocalHistory();
         state.activeDrawings = {};
         redraw();
         showToast("The canvas was cleared by a collaborator.");
@@ -162,6 +184,7 @@ export function registerSocketListeners() {
     //Authoritative history snapshot update (Undo)
     socket.on('history-updated', (updatedHistory) => {
         state.history = updatedHistory;
+        saveLocalHistory();
         redraw();
     });
 

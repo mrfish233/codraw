@@ -1,9 +1,9 @@
 // CoDraw Application Bootstrapper & Main Entry Point
 
-import { state } from './state.js';
+import { state, loadLocalProfile, loadLocalHistory } from './state.js';
 import { dom } from './dom.js';
 import { initRoomConnection, registerSocketListeners } from './socket.js';
-import { resizeCanvas, handleStart, handleMove, handleEnd } from './canvas.js';
+import { resizeCanvas, handleStart, handleMove, handleEnd, redraw } from './canvas.js';
 import { bindChatEvents } from './chat.js';
 import { bindMinimapEvents } from './minimap.js';
 import { bindUiEvents } from './ui.js';
@@ -55,6 +55,12 @@ function bootstrapApplication() {
     // 5. Connect and register WebSockets synchronization
     registerSocketListeners();
     initRoomConnection();
+    
+    // Load local cached profile and whiteboard history instantly to prevent flickering
+    loadLocalProfile();
+    if (loadLocalHistory()) {
+        redraw();
+    }
     
     // 6. Set initial viewport sizes
     resizeCanvas();
