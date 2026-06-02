@@ -23,9 +23,26 @@ let history = []; // Array of committed drawing actions
 let activeDrawings = {}; // Live preview drawing actions from other users { userId: action }
 let usersList = {}; // Tracking active users in the room { socketId: userInfo }
 
+// Infinite board panning offset states
+let offsetX = 0;
+let offsetY = 0;
+let isPanning = false;
+let panStart = { x: 0, y: 0 };
+let isSpacePressed = false;
+
+// Export Specified Selection Area states
+let exportSelection = null; // Stores { startX, startY, endX, endY } or { x, y, w, h } in world coordinates
+let isSelectingArea = false;
+
+// Virtual Board Configuration
+const BOARD_WIDTH = 4000;
+const BOARD_HEIGHT = 4000;
+
 // UI Elements
 const canvas = document.getElementById('paint-canvas');
 const ctx = canvas.getContext('2d');
+const minimapCanvas = document.getElementById('minimap-canvas');
+const minimapCtx = minimapCanvas.getContext('2d');
 const gridOverlay = document.getElementById('grid-overlay');
 const cursorsContainer = document.getElementById('cursors-container');
 const roomDisplay = document.getElementById('room-id-display');
@@ -91,6 +108,15 @@ function redraw() {
     const dpr = window.devicePixelRatio || 1;
     ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
     
+    // Shift the CSS dot grid background in absolute sync with board movement
+    if (gridOverlay) {
+        gridOverlay.style.backgroundPosition = `${offsetX}px ${offsetY}px`;
+    }
+    
+    ctx.save();
+    // Translate standard drawings by infinite canvas offset
+    ctx.translate(offsetX, offsetY);
+    
     // 1. Draw committed drawing history
     history.forEach(action => {
         drawAction(action);
@@ -117,6 +143,40 @@ function redraw() {
         };
         drawAction(localActiveAction);
     }
+    
+    // Draw export area selection box if active (inside translated context)
+    if (exportSelection) {
+        ctx.save();
+        ctx.strokeStyle = '#a855f7'; // Neon purple
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 5]);
+        ctx.fillStyle = 'rgba(168, 85, 247, 0.1)';
+        
+        const selX = exportSelection.x !== undefined ? exportSelection.x : Math.min(exportSelection.startX, exportSelection.endX);
+        const selY = exportSelection.y !== undefined ? exportSelection.y : Math.min(exportSelection.startY, exportSelection.endY);
+        const selW = exportSelection.w !== undefined ? exportSelection.w : Math.abs(exportSelection.startX - exportSelection.endX);
+        const selH = exportSelection.h !== undefined ? exportSelection.h : Math.abs(exportSelection.startY - exportSelection.endY);
+        
+        ctx.fillRect(selX, selY, selW, selH);
+        ctx.strokeRect(selX, selY, selW, selH);
+        
+        // Draw selection corner handles
+        ctx.fillStyle = '#ffffff';
+        const hs = 6; // Handle size
+        ctx.fillRect(selX - hs/2, selY - hs/2, hs, hs);
+        ctx.fillRect(selX + selW - hs/2, selY - hs/2, hs, hs);
+        ctx.fillRect(selX - hs/2, selY + selH - hs/2, hs, hs);
+        ctx.fillRect(selX + selW - hs/2, selY + selH - hs/2, hs, hs);
+        ctx.restore();
+    }
+    
+    ctx.restore();
+    
+    // 4. Update the overall board map view
+    drawMinimap();
+    
+    // 5. Shift other users' live HTML cursors relative to viewport movement
+    repositionAllPeerCursors();
 }
 
 // Core drawing primitive
@@ -183,6 +243,96 @@ function drawAction(action) {
     ctx.restore();
 }
 
+// Draw the Minimap on the small canvas
+function drawMinimap() {
+    if (!minimapCanvas) return;
+    
+    const width = minimapCanvas.parentElement.clientWidth;
+    const height = minimapCanvas.parentElement.clientHeight;
+    
+    // Set actual canvas size matching displayed bounds
+    minimapCanvas.width = width;
+    minimapCanvas.height = height;
+    
+    // Clear and draw background
+    minimapCtx.clearRect(0, 0, width, height);
+    minimapCtx.fillStyle = 'rgba(7, 9, 19, 0.4)';
+    minimapCtx.fillRect(0, 0, width, height);
+    
+    minimapCtx.save();
+    
+    // Scale virtual coordinate system (-BOARD_WIDTH/2 to BOARD_WIDTH/2) into minimap space
+    minimapCtx.scale(width / BOARD_WIDTH, height / BOARD_HEIGHT);
+    minimapCtx.translate(BOARD_WIDTH / 2, BOARD_HEIGHT / 2);
+    
+    // Draw all committed drawing paths
+    history.forEach(action => {
+        minimapCtx.save();
+        minimapCtx.lineCap = 'round';
+        minimapCtx.lineJoin = 'round';
+        
+        // Render thinner strokes on the minimap but make sure they stay visible
+        minimapCtx.lineWidth = Math.max(10, action.width * 1.5);
+        minimapCtx.strokeStyle = action.tool === 'eraser' ? '#070913' : action.color;
+        minimapCtx.fillStyle = action.tool === 'eraser' ? '#070913' : action.color;
+        
+        if (action.tool === 'brush' || action.tool === 'eraser') {
+            if (action.points && action.points.length > 0) {
+                minimapCtx.beginPath();
+                minimapCtx.moveTo(action.points[0].x, action.points[0].y);
+                for (let i = 1; i < action.points.length; i++) {
+                    minimapCtx.lineTo(action.points[i].x, action.points[i].y);
+                }
+                minimapCtx.stroke();
+            }
+        } else if (action.tool === 'line') {
+            if (action.start && action.end) {
+                minimapCtx.beginPath();
+                minimapCtx.moveTo(action.start.x, action.start.y);
+                minimapCtx.lineTo(action.end.x, action.end.y);
+                minimapCtx.stroke();
+            }
+        } else if (action.tool === 'rect') {
+            if (action.start && action.end) {
+                const x = Math.min(action.start.x, action.end.x);
+                const y = Math.min(action.start.y, action.end.y);
+                const w = Math.abs(action.start.x - action.end.x);
+                const h = Math.abs(action.start.y - action.end.y);
+                minimapCtx.beginPath();
+                minimapCtx.rect(x, y, w, h);
+                if (action.fill) minimapCtx.fill();
+                minimapCtx.stroke();
+            }
+        } else if (action.tool === 'circle') {
+            if (action.start && action.end) {
+                const dx = action.end.x - action.start.x;
+                const dy = action.end.y - action.start.y;
+                const radius = Math.sqrt(dx * dx + dy * dy);
+                minimapCtx.beginPath();
+                minimapCtx.arc(action.start.x, action.start.y, radius, 0, 2 * Math.PI);
+                if (action.fill) minimapCtx.fill();
+                minimapCtx.stroke();
+            }
+        }
+        minimapCtx.restore();
+    });
+    
+    // Draw current active viewport bounding box
+    const rect = canvas.getBoundingClientRect();
+    const viewportWidth = rect.width;
+    const viewportHeight = rect.height;
+    
+    // Viewport relative bounds in world space is (-offsetX, -offsetY) to (width - offsetX, height - offsetY)
+    minimapCtx.strokeStyle = 'rgba(99, 102, 241, 0.8)';
+    minimapCtx.lineWidth = 20; // thick enough to be visible in scaled space
+    minimapCtx.fillStyle = 'rgba(99, 102, 241, 0.1)';
+    
+    minimapCtx.fillRect(-offsetX, -offsetY, viewportWidth, viewportHeight);
+    minimapCtx.strokeRect(-offsetX, -offsetY, viewportWidth, viewportHeight);
+    
+    minimapCtx.restore();
+}
+
 // ----------------------------------------------------
 // LOCAL USER DRAWING INTERACTIONS (MOUSE/TOUCH)
 // ----------------------------------------------------
@@ -205,16 +355,53 @@ function getCoordinates(e) {
 }
 
 function handleStart(e) {
-    if (e.button && e.button !== 0) return; // Only trigger on main mouse click
+    const isMiddleClick = e.button === 1;
+    const isPanTool = currentTool === 'pan';
+    const isExportAreaTool = currentTool === 'export-area';
+    
+    // Switch to selection mode if export area tool is selected
+    if (isExportAreaTool) {
+        isSelectingArea = true;
+        const screenCoord = getCoordinates(e);
+        const worldCoord = {
+            x: screenCoord.x - offsetX,
+            y: screenCoord.y - offsetY
+        };
+        exportSelection = {
+            startX: worldCoord.x,
+            startY: worldCoord.y,
+            endX: worldCoord.x,
+            endY: worldCoord.y
+        };
+        redraw();
+        return;
+    }
+    
+    // Switch to panning if spacebar is held, middle-clicked, or Pan tool is selected
+    if (isSpacePressed || isMiddleClick || isPanTool) {
+        isPanning = true;
+        const screenCoord = getCoordinates(e);
+        panStart = screenCoord;
+        canvas.style.cursor = 'grabbing';
+        return;
+    }
+    
+    if (e.button && e.button !== 0) return; // Ignore other non-main click triggers
     
     isDrawing = true;
-    const coord = getCoordinates(e);
-    startPoint = coord;
-    currentPoint = coord;
-    points = [coord];
+    const screenCoord = getCoordinates(e);
+    // Convert screen coordinates to virtual world space coordinates
+    const worldCoord = {
+        x: screenCoord.x - offsetX,
+        y: screenCoord.y - offsetY
+    };
     
-    // Broadcast cursor position including active drawing status
-    broadcastCursor(coord.x, coord.y, true);
+    startPoint = worldCoord;
+    currentPoint = worldCoord;
+    points = [worldCoord];
+    
+    // Broadcast cursor position in world space
+    broadcastCursor(worldCoord.x, worldCoord.y, true);
     
     // Broadcast active temporary drawing update for freehand
     if (currentTool === 'brush' || currentTool === 'eraser') {
@@ -231,16 +418,44 @@ function handleStart(e) {
 }
 
 function handleMove(e) {
-    const coord = getCoordinates(e);
-    currentPoint = coord;
+    const screenCoord = getCoordinates(e);
+    const worldCoord = {
+        x: screenCoord.x - offsetX,
+        y: screenCoord.y - offsetY
+    };
     
-    // Track cursor positioning
-    broadcastCursor(coord.x, coord.y, isDrawing);
+    // Active dragging selection area bounds
+    if (isSelectingArea) {
+        exportSelection.endX = worldCoord.x;
+        exportSelection.endY = worldCoord.y;
+        redraw();
+        return;
+    }
+    
+    // Active dragging panning movement
+    if (isPanning) {
+        const dx = screenCoord.x - panStart.x;
+        const dy = screenCoord.y - panStart.y;
+        
+        offsetX += dx;
+        offsetY += dy;
+        panStart = screenCoord;
+        
+        // Broadcast our idle pointer coordinate in world space
+        broadcastCursor(worldCoord.x, worldCoord.y, false);
+        redraw();
+        return;
+    }
+    
+    // Track cursor positioning in world space
+    broadcastCursor(worldCoord.x, worldCoord.y, isDrawing);
     
     if (!isDrawing) return;
     
+    currentPoint = worldCoord;
+    
     if (currentTool === 'brush' || currentTool === 'eraser') {
-        points.push(coord);
+        points.push(worldCoord);
         
         // Emit dragging brush data in real time to others
         socket.emit('draw-active', {
@@ -267,10 +482,36 @@ function handleMove(e) {
 }
 
 function handleEnd() {
+    // Switch off selection mode if active
+    if (isSelectingArea) {
+        isSelectingArea = false;
+        
+        // Ensure selection has positive dimensions
+        const x = Math.min(exportSelection.startX, exportSelection.endX);
+        const y = Math.min(exportSelection.startY, exportSelection.endY);
+        const w = Math.abs(exportSelection.startX - exportSelection.endX);
+        const h = Math.abs(exportSelection.startY - exportSelection.endY);
+        
+        // If selection size is extremely small (just a click), discard it
+        if (w < 5 || h < 5) {
+            exportSelection = null;
+        } else {
+            exportSelection = { x, y, w, h };
+        }
+        redraw();
+        return;
+    }
+    
+    if (isPanning) {
+        isPanning = false;
+        canvas.style.cursor = isSpacePressed || currentTool === 'pan' ? 'grab' : 'crosshair';
+        return;
+    }
+    
     if (!isDrawing) return;
     isDrawing = false;
     
-    // Save current cursor position as idle
+    // Save current cursor position in world space as idle
     broadcastCursor(currentPoint.x, currentPoint.y, false);
     
     // Remove our active temporary path locally and tell others to wipe it
@@ -348,8 +589,10 @@ function updatePeerCursor(cursorData) {
         cursorEl.classList.remove('drawing');
     }
     
-    // Position the element
-    cursorEl.style.transform = `translate(${cursorData.x}px, ${cursorData.y}px)`;
+    // Position the element relative to our local panning translation offset
+    const screenX = cursorData.x + offsetX;
+    const screenY = cursorData.y + offsetY;
+    cursorEl.style.transform = `translate(${screenX}px, ${screenY}px)`;
     
     // Update Username tag text
     const labelEl = cursorEl.querySelector('.peer-cursor-label');
@@ -480,15 +723,35 @@ const toolButtons = {
     'line': document.getElementById('tool-line'),
     'rect': document.getElementById('tool-rect'),
     'circle': document.getElementById('tool-circle'),
-    'eraser': document.getElementById('tool-eraser')
+    'eraser': document.getElementById('tool-eraser'),
+    'pan': document.getElementById('tool-pan'),
+    'export-area': document.getElementById('tool-export-area')
 };
 
 Object.entries(toolButtons).forEach(([tool, button]) => {
+    if (!button) return;
     button.addEventListener('click', () => {
         // Toggle Active toolbar item styling
-        Object.values(toolButtons).forEach(btn => btn.classList.remove('active'));
+        Object.values(toolButtons).forEach(btn => {
+            if (btn) btn.classList.remove('active');
+        });
         button.classList.add('active');
         currentTool = tool;
+        
+        // Clear active export selection area if user switches to a normal drawing tool
+        if (tool !== 'export-area' && exportSelection) {
+            exportSelection = null;
+            redraw();
+        }
+        
+        // Dynamically adjust workspace cursor
+        if (tool === 'pan') {
+            canvas.style.cursor = 'grab';
+        } else if (tool === 'export-area') {
+            canvas.style.cursor = 'cell';
+        } else {
+            canvas.style.cursor = 'crosshair';
+        }
     });
 });
 
@@ -571,17 +834,38 @@ document.getElementById('action-clear').addEventListener('click', () => {
 // Export Drawing PNG Trigger
 document.getElementById('action-export').addEventListener('click', () => {
     const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = canvas.width;
-    exportCanvas.height = canvas.height;
     const exportCtx = exportCanvas.getContext('2d');
+    
+    let exportW, exportH;
+    let translateTranslation = { x: 0, y: 0 };
+    
+    // Check if there is an active specified selection area
+    if (exportSelection && exportSelection.x !== undefined) {
+        exportW = exportSelection.w;
+        exportH = exportSelection.h;
+        translateTranslation = { x: -exportSelection.x, y: -exportSelection.y };
+    } else {
+        // Default: export current user's visible viewport board view
+        const rect = canvas.getBoundingClientRect();
+        exportW = rect.width;
+        exportH = rect.height;
+        translateTranslation = { x: offsetX, y: offsetY };
+    }
+    
+    // Account for Retina display scaling to keep exports high resolution
+    const dpr = window.devicePixelRatio || 1;
+    exportCanvas.width = exportW * dpr;
+    exportCanvas.height = exportH * dpr;
+    
+    exportCtx.scale(dpr, dpr);
     
     // Paint drawing workspace background base color (so elements drawn transparent display properly)
     exportCtx.fillStyle = '#070913';
-    exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+    exportCtx.fillRect(0, 0, exportW, exportH);
     
-    // Scale matching current display ratio
-    const dpr = window.devicePixelRatio || 1;
-    exportCtx.scale(dpr, dpr);
+    // Apply translation to draw only the visible/selected section
+    exportCtx.save();
+    exportCtx.translate(translateTranslation.x, translateTranslation.y);
     
     // Redraw committed history to export canvas
     history.forEach(action => {
@@ -645,12 +929,22 @@ document.getElementById('action-export').addEventListener('click', () => {
         exportCtx.restore();
     });
     
+    exportCtx.restore();
+    
     // Download image trigger
     const link = document.createElement('a');
-    link.download = `codraw-artwork-${roomId}.png`;
+    const typeLabel = exportSelection ? "selection" : "viewport";
+    link.download = `codraw-${typeLabel}-${roomId}.png`;
     link.href = exportCanvas.toDataURL('image/png');
     link.click();
-    showToast("Canvas artwork downloaded successfully!");
+    
+    showToast(`Board ${typeLabel} view exported successfully!`);
+    
+    // Auto-clear selection after successful export
+    if (exportSelection) {
+        exportSelection = null;
+        redraw();
+    }
 });
 
 // ----------------------------------------------------
@@ -913,6 +1207,103 @@ socket.on('cursor-update', (cursorData) => {
 socket.on('receive-chat', (messageObj) => {
     appendChatMessage(messageObj);
 });
+
+// Reposition all peer cursors dynamically during board panning
+function repositionAllPeerCursors() {
+    Object.values(usersList).forEach(user => {
+        if (user.id !== userId && user.cursor) {
+            const cursorEl = document.getElementById(`cursor-${user.id}`);
+            if (cursorEl) {
+                const screenX = user.cursor.x + offsetX;
+                const screenY = user.cursor.y + offsetY;
+                cursorEl.style.transform = `translate(${screenX}px, ${screenY}px)`;
+            }
+        }
+    });
+}
+
+// Keyboard Spacebar Panning Toggles
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        // Prevent default space key scroll actions
+        if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            if (!isSpacePressed) {
+                isSpacePressed = true;
+                canvas.style.cursor = 'grab';
+            }
+        }
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') {
+        isSpacePressed = false;
+        canvas.style.cursor = currentTool === 'pan' ? 'grab' : 'crosshair';
+    }
+});
+
+// Minimap Drag-to-Navigate Logic
+let isNavigatingMinimap = false;
+
+function handleMinimapNavigation(e) {
+    if (!minimapCanvas) return;
+    const rect = minimapCanvas.getBoundingClientRect();
+    let clientX = e.clientX;
+    let clientY = e.clientY;
+    
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    }
+    
+    const mx = clientX - rect.left;
+    const my = clientY - rect.top;
+    
+    // Map clicked coords (0 to rect.width/height) to world coords (-BOARD_WIDTH/2 to BOARD_WIDTH/2)
+    const worldX = (mx / rect.width) * BOARD_WIDTH - BOARD_WIDTH / 2;
+    const worldY = (my / rect.height) * BOARD_HEIGHT - BOARD_HEIGHT / 2;
+    
+    // Center the viewport on these world coordinates
+    const canvasRect = canvas.getBoundingClientRect();
+    offsetX = canvasRect.width / 2 - worldX;
+    offsetY = canvasRect.height / 2 - worldY;
+    
+    redraw();
+}
+
+if (minimapCanvas) {
+    minimapCanvas.addEventListener('mousedown', (e) => {
+        isNavigatingMinimap = true;
+        handleMinimapNavigation(e);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (isNavigatingMinimap) {
+            handleMinimapNavigation(e);
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isNavigatingMinimap = false;
+    });
+
+    // Touch support for mobile minimap navigation
+    minimapCanvas.addEventListener('touchstart', (e) => {
+        isNavigatingMinimap = true;
+        handleMinimapNavigation(e);
+    });
+
+    minimapCanvas.addEventListener('touchmove', (e) => {
+        if (isNavigatingMinimap) {
+            handleMinimapNavigation(e);
+        }
+    });
+
+    minimapCanvas.addEventListener('touchend', () => {
+        isNavigatingMinimap = false;
+    });
+}
 
 // ----------------------------------------------------
 // SYSTEM BOOTSTRAP INITIALIZATION
