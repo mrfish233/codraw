@@ -37,13 +37,18 @@
     -webkit-font-smoothing: antialiased;
 }
 
+html, body {
+    touch-action: none;
+    position: fixed;
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+}
+
 body {
     font-family: var(--font-main);
     background-color: var(--bg-dark);
     color: var(--text-primary);
-    overflow: hidden;
-    height: 100vh;
-    width: 100vw;
 }
 
 /* Background Glow Elements */
@@ -252,6 +257,7 @@ header {
     width: 100%;
     height: 100%;
     z-index: 12;
+    touch-action: none;
 }
 
 .grid-background {
@@ -627,6 +633,8 @@ header {
     flex-direction: column;
     gap: 12px;
     scroll-behavior: smooth;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Custom Scrollbar for Chat & User list */
@@ -741,6 +749,8 @@ header {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
 }
 
 .collaborator-item {

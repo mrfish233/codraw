@@ -116,6 +116,15 @@ function bootstrapApplication() {
     
     // 6. Set initial viewport sizes
     resizeCanvas();
+
+    // 7. Prevent iOS / iPadOS Safari rubber-band scrolling and viewport drag bounce
+    document.addEventListener('touchmove', (e) => {
+        // Allow vertical touch scrolling inside designated scrollable containers
+        const isScrollable = e.target.closest('.chat-messages-container') || e.target.closest('.users-list-container');
+        if (!isScrollable) {
+            e.preventDefault();
+        }
+    }, { passive: false });
 }
 
 // Initialise application on DOM Content loaded
