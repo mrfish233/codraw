@@ -624,4 +624,36 @@ export function bindUiEvents() {
             }
         });
     }
+
+    // Toggle Drawing Toolbar Minimization/Expansion
+    const toolToggleExpand = document.getElementById('tool-toggle-expand');
+    if (toolToggleExpand && dom.drawingToolbar) {
+        toolToggleExpand.addEventListener('click', () => {
+            dom.drawingToolbar.classList.toggle('minimized');
+        });
+        
+        // Auto-minimize on page load if screen width is mobile
+        if (window.innerWidth <= 768) {
+            dom.drawingToolbar.classList.add('minimized');
+            
+            // Auto-hide right chat sidebar on mobile page load
+            if (dom.chatSidebar && dom.toggleChatBtn) {
+                dom.chatSidebar.classList.add('hidden');
+                if (dom.appContainer) {
+                    dom.appContainer.classList.add('chat-hidden');
+                }
+                dom.toggleChatBtn.classList.remove('active');
+                const span = dom.toggleChatBtn.querySelector('span');
+                if (span) span.textContent = 'Show Chat';
+                dom.toggleChatBtn.setAttribute('title', 'Show Chat Panel');
+            }
+        }
+    }
+
+    // Close Chat Sidebar Button (mobile only close button inside sidebar)
+    if (dom.closeChatSidebarBtn && dom.toggleChatBtn) {
+        dom.closeChatSidebarBtn.addEventListener('click', () => {
+            dom.toggleChatBtn.click();
+        });
+    }
 }
