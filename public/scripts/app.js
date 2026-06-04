@@ -120,7 +120,9 @@ function bootstrapApplication() {
     // 7. Prevent iOS / iPadOS Safari rubber-band scrolling and viewport drag bounce
     document.addEventListener('touchmove', (e) => {
         // Allow vertical touch scrolling inside designated scrollable containers
-        const isScrollable = e.target.closest('.chat-messages-container') || e.target.closest('.users-list-container');
+        const isScrollable = e.target.closest('.chat-messages-container') || 
+                             e.target.closest('.users-list-container') ||
+                             e.target.closest('.floating-toolbar');
         if (!isScrollable) {
             e.preventDefault();
         }
