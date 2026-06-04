@@ -335,15 +335,24 @@ header {
 /* Floating Toolbar (Left) */
 .floating-toolbar {
     position: absolute;
-    top: 110px;
+    top: 86px;
     left: 20px;
     width: 240px;
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
     border-radius: var(--radius-lg);
-    padding: 20px;
+    padding: 16px;
     z-index: 90;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar for a clean, premium floating card aesthetic */
+.floating-toolbar::-webkit-scrollbar {
+    display: none;
 }
 
 .tool-section h3 {
@@ -1255,4 +1264,221 @@ header {
     border-color: #a855f7 !important;
     color: #a855f7 !important;
     box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+}
+
+/* Sidebar Close Button */
+.close-sidebar-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-round);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: none; /* Hidden by default on desktop */
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.close-sidebar-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+/* Sidebar Minimization rules */
+.minimized.floating-toolbar {
+    width: 68px !important;
+    padding: 12px 6px !important;
+    max-height: calc(100vh - 160px) !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.minimized .tool-section-header {
+    justify-content: center !important;
+    margin-bottom: 8px !important;
+    width: 100% !important;
+}
+
+.minimized .tool-section-header h3,
+.minimized .tool-section h3,
+.minimized .tool-divider,
+.minimized #style-divider,
+.minimized #style-section {
+    display: none !important;
+}
+
+.minimized .tool-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+    justify-items: center !important;
+}
+
+.minimized .tool-btn {
+    height: 42px !important;
+    width: 42px !important;
+    padding: 0 !important;
+}
+
+#tool-toggle-expand svg {
+    transition: transform 0.3s ease;
+}
+
+.minimized #tool-toggle-expand svg {
+    transform: rotate(-180deg);
+}
+
+/* RWD for Tablet / Large Phone users */
+@media (max-width: 768px) {
+    .close-sidebar-btn {
+        display: flex !important;
+    }
+    
+    .tabs-header {
+        padding-right: 48px !important;
+    }
+
+    .floating-sidebar {
+        display: flex !important;
+        position: fixed !important;
+        top: 84px !important;
+        right: 12px !important;
+        bottom: 86px !important;
+        left: 12px !important;
+        width: auto !important;
+        max-width: none !important;
+        z-index: 200 !important;
+        background: rgba(15, 17, 28, 0.96) !important;
+        backdrop-filter: blur(25px) !important;
+        box-shadow: var(--shadow-lg) !important;
+    }
+    
+    .floating-sidebar.hidden {
+        transform: translateX(calc(100% + 24px)) !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+    
+    .floating-actions {
+        left: 12px !important;
+        right: 12px !important;
+        bottom: 12px !important;
+        height: 60px !important;
+        padding: 0 12px !important;
+        z-index: 150 !important;
+        justify-content: center !important;
+        gap: 8px !important;
+    }
+
+    .floating-actions .action-btn span {
+        display: none !important;
+    }
+
+    .floating-actions .action-btn {
+        min-width: 38px !important;
+        width: 38px !important;
+        height: 38px !important;
+        padding: 0 !important;
+        justify-content: center !important;
+        border-radius: var(--radius-round) !important;
+        gap: 0 !important;
+    }
+
+    .floating-actions .action-btn svg {
+        margin: 0 !important;
+    }
+
+    .floating-actions .action-divider {
+        margin: 0 4px !important;
+        height: 20px !important;
+    }
+
+    /* Top bar buttons icon-only when space is restricted (<= 768px) */
+    #invite-btn span,
+    #toggle-mode-btn span,
+    #toggle-chat-btn span {
+        display: none !important;
+    }
+    
+    #invite-btn,
+    #toggle-mode-btn,
+    #toggle-chat-btn {
+        min-width: 38px !important;
+        width: 38px !important;
+        height: 38px !important;
+        padding: 0 !important;
+        margin-right: 4px !important;
+        justify-content: center !important;
+        align-items: center !important;
+        border-radius: var(--radius-round) !important;
+        gap: 0 !important;
+    }
+    
+    #invite-btn svg,
+    #toggle-mode-btn svg,
+    #toggle-chat-btn svg {
+        margin: 0 !important;
+    }
+
+    /* Room label collapsed to save space */
+    .room-label {
+        display: none !important;
+    }
+    
+    .room-indicator {
+        padding: 6px 12px !important;
+        gap: 6px !important;
+    }
+
+    /* Collapse profile badge to avatar only */
+    .user-profile-badge {
+        padding: 0 !important;
+        background: none !important;
+        border: none !important;
+    }
+    
+    .user-profile-badge .username-text,
+    .user-profile-badge .chevron {
+        display: none !important;
+    }
+}
+
+/* RWD for Phone users (max-width: 600px) */
+@media (max-width: 600px) {
+    header {
+        padding: 0 12px !important;
+        height: 60px !important;
+        top: 12px !important;
+        left: 12px !important;
+        right: 12px !important;
+    }
+    
+    .logo h1 {
+        font-size: 16px !important;
+    }
+    
+    .header-left, .header-right {
+        gap: 6px !important;
+    }
+
+    .room-indicator {
+        display: none !important;
+    }
+
+    /* Left sidebar layout when expanded on mobile needs to fit 200px width */
+    .floating-toolbar {
+        top: 84px !important;
+        left: 12px !important;
+        width: 200px !important;
+    }
+    
+    .floating-toolbar.minimized {
+        width: 68px !important;
+    }
 }

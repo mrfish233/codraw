@@ -59,5 +59,9 @@ export const dom = {
     confirmTitle: document.getElementById('confirm-title'),
     confirmMessage: document.getElementById('confirm-message'),
     confirmCancelBtn: document.getElementById('confirm-cancel'),
-    confirmSubmitBtn: document.getElementById('confirm-submit')
+    confirmSubmitBtn: document.getElementById('confirm-submit'),
+    
+    // Left Toolbar selector
+    drawingToolbar: document.getElementById('drawing-toolbar'),
+    closeChatSidebarBtn: document.getElementById('close-chat-sidebar-btn')
 };
