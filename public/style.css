@@ -1372,12 +1372,31 @@ header {
         height: 60px !important;
         padding: 0 12px !important;
         z-index: 150 !important;
+        justify-content: center !important;
+        gap: 8px !important;
     }
 
-    .action-btn {
+    .floating-actions .action-btn span {
+        display: none !important;
+    }
+
+    .floating-actions .action-btn {
+        min-width: 38px !important;
+        width: 38px !important;
         height: 38px !important;
-        font-size: 12px !important;
-        padding: 0 12px !important;
+        padding: 0 !important;
+        justify-content: center !important;
+        border-radius: var(--radius-round) !important;
+        gap: 0 !important;
+    }
+
+    .floating-actions .action-btn svg {
+        margin: 0 !important;
+    }
+
+    .floating-actions .action-divider {
+        margin: 0 4px !important;
+        height: 20px !important;
     }
 
     /* Top bar buttons icon-only when space is restricted (<= 768px) */
